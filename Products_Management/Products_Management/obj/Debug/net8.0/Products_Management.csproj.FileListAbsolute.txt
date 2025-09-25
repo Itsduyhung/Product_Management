@@ -189,3 +189,7 @@ D:\CS\Product_manage\Products_Management\Products_Management\bin\Debug\net8.0\zh
 D:\CS\Product_manage\Products_Management\Products_Management\bin\Debug\net8.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 D:\CS\Product_manage\Products_Management\Products_Management\bin\Debug\net8.0\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
 D:\CS\Product_manage\Products_Management\Products_Management\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+D:\CS\Product_manage\Products_Management\Products_Management\bin\Debug\net8.0\FluentValidation.dll
+D:\CS\Product_manage\Products_Management\Products_Management\bin\Debug\net8.0\FluentValidation.AspNetCore.dll
+D:\CS\Product_manage\Products_Management\Products_Management\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll
+D:\CS\Product_manage\Products_Management\Products_Management\obj\Debug\net8.0\Products_Management.sourcelink.json

@@ -1,8 +1,8 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Products_Management",
-    "version": "1.0"
+    "title": "Products Management API",
+    "version": "v1"
   },
   "paths": {
     "/api/Entity": {

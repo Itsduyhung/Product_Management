@@ -6,23 +6,17 @@ namespace Products_Management.API
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class EntityController : ControllerBase
+    public class EntityController(IEntityService service, Cloudinary cloudinary) : ControllerBase
     {
-        private readonly IEntityService _service;
-        private readonly Cloudinary _cloudinary;
-
-        public EntityController(IEntityService service, Cloudinary cloudinary)
-        {
-            _service = service;
-            _cloudinary = cloudinary;
-        }
+        private readonly IEntityService _service = service;
+        private readonly Cloudinary _cloudinary = cloudinary;
 
         [HttpGet]
         public async Task<ActionResult<List<EntityResponse>>> GetAll()
         {
-            return Ok(await _service.GetAllAsync());
+            var entities = await _service.GetAllAsync();
+            return Ok(entities);
         }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<EntityResponse>> GetById(int id)
         {
@@ -30,7 +24,6 @@ namespace Products_Management.API
             if (entity == null) return NotFound();
             return Ok(entity);
         }
-
         [HttpPost]
         public async Task<ActionResult<EntityResponse>> Create([FromForm] EntityRequest request)
         {
@@ -42,7 +35,7 @@ namespace Products_Management.API
                 var uploadParams = new ImageUploadParams
                 {
                     File = new FileDescription(request.ImageUrl.FileName, stream),
-                    Folder = "products" // ✅ Cloudinary folder (tuỳ bạn đặt)
+                    Folder = "products"
                 };
 
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);

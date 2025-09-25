@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FluentValidation;
+using FluentValidation.AspNetCore;
 using Products_Management.API;
 using CloudinaryDotNet;
+using Microsoft.EntityFrameworkCore;
 
 namespace Products_Management
 {
@@ -10,56 +12,64 @@ namespace Products_Management
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Add Controllers + FluentValidation
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new() { Title = "Products Management API", Version = "v1" });
+            });
+
+            builder.Services.AddFluentValidationAutoValidation()
+                            .AddFluentValidationClientsideAdapters();
+            builder.Services.AddValidatorsFromAssemblyContaining<EntityRequestValidator>();
+
+            // React CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowReactApp",
                     policy =>
                     {
-                        policy.WithOrigins("http://localhost:3000") // URL ReactJS
+                        policy.WithOrigins("http://localhost:3000")
                               .AllowAnyHeader()
                               .AllowAnyMethod();
                     });
             });
 
-            // ✅ Đăng ký DbContext cho PostgreSQL
+            // PostgreSQL
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // ✅ Đăng ký Repository
+            // Repository + Service
             builder.Services.AddScoped<IEntityRepository, EntityRepository>();
             builder.Services.AddScoped<IEntityService, EntityService>();
 
-            // ✅ Config Cloudinary (đọc từ "CloudinarySettings")
+            // Cloudinary
             var cloudName = builder.Configuration["CloudinarySettings:CloudName"];
             var apiKey = builder.Configuration["CloudinarySettings:ApiKey"];
             var apiSecret = builder.Configuration["CloudinarySettings:ApiSecret"];
 
             var account = new Account(cloudName, apiKey, apiSecret);
-            var cloudinary = new Cloudinary(account)
-            {
-                Api = { Secure = true } // luôn dùng HTTPS
-            };
-
+            var cloudinary = new Cloudinary(account) { Api = { Secure = true } };
             builder.Services.AddSingleton(cloudinary);
-
-            // ✅ Đăng ký Service (không cần interface nữa)
-            builder.Services.AddScoped<EntityService>();
 
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
+            // Swagger - bật cả trong Production
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Products Management API v1");
+                c.RoutePrefix = string.Empty; // Swagger UI ở "/"
+            });
 
-            app.UseHttpsRedirection();
+            // ⚠️ Tạm thời tắt HTTPS redirect trong Docker để tránh lỗi
+            // app.UseHttpsRedirection();
+
             app.UseCors("AllowReactApp");
             app.UseAuthorization();
             app.MapControllers();
+
             app.Run();
         }
     }

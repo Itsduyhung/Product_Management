@@ -53,7 +53,7 @@
                 Name = request.Name,
                 Description = request.Description,
                 Price = request.Price,
-                ImageUrl = imgUrl ?? "" // 📌 lưu link Cloudinary
+                ImageUrl = imgUrl ?? ""
             };
 
             var created = await _repository.AddAsync(entity);
