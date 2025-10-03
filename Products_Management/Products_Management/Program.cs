@@ -11,8 +11,6 @@ namespace Products_Management
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-            // Add Controllers + FluentValidation
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -24,15 +22,27 @@ namespace Products_Management
                             .AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<EntityRequestValidator>();
 
-            // CORS cho React (local + vercel)
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowReactApp", policy =>
                 {
                     policy.SetIsOriginAllowed(origin =>
-                        origin.StartsWith("http://localhost:3000") ||
-                        origin.EndsWith(".vercel.app")
-                    )
+                    {
+                        if (origin.StartsWith("http://localhost:3000") || origin.StartsWith("https://localhost:3000"))
+                        {
+                            return true;
+                        }
+                        if (origin == "https://product-management-delta-virid.vercel.app")
+                        {
+                            return true;
+                        }
+                        if (origin.EndsWith(".vercel.app"))
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    })
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -58,20 +68,15 @@ namespace Products_Management
 
             var app = builder.Build();
 
-            // Swagger - bật cả trong Production
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Products Management API v1");
-                c.RoutePrefix = string.Empty; // Swagger UI ở "/"
+                c.RoutePrefix = string.Empty;
             });
-
-            // ⚠️ Không dùng HTTPS redirect trong Docker
-            // app.UseHttpsRedirection();
-
-            // Routing + CORS + Auth
-            app.UseRouting();
             app.UseCors("AllowReactApp");
+
+            app.UseRouting();
             app.UseAuthorization();
 
             app.MapControllers();
