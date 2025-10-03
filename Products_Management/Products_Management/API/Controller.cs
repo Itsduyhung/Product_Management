@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Products_Management.API
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/products")]
     public class EntityController(IEntityService service, Cloudinary cloudinary) : ControllerBase
     {
         private readonly IEntityService _service = service;
