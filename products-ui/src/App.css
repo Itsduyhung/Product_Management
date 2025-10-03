@@ -1,0 +1,242 @@
+/* General app layout */
+.app-container {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #f4f7f9;
+  min-height: 100vh;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+header h1 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.add-btn {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s;
+}
+
+.add-btn:hover {
+  background-color: #218838;
+}
+
+/* Product list layout */
+.product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  justify-content: center;
+}
+
+.product-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.product-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.product-card h3 {
+  font-size: 18px;
+  color: #333;
+  padding: 10px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-around;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.actions button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+.actions button:first-of-type {
+  background-color: #17a2b8;
+  color: #fff;
+}
+
+.actions button:first-of-type:hover {
+  background-color: #138496;
+}
+
+.actions button:nth-of-type(2) {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.actions button:nth-of-type(2):hover {
+  background-color: #e0a800;
+}
+
+.actions button:last-of-type {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.actions button:last-of-type:hover {
+  background-color: #c82333;
+}
+
+/* Modal UI */
+
+/* Overlay to darken the background */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal container (the form itself) */
+.modal-container {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-container h2 {
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.modal-container form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-container label {
+  font-weight: 600;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.modal-container input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.modal-container input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.modal-container input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+.modal-container .preview-img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-top: 15px;
+  border: 1px solid #ddd;
+}
+
+.modal-container button {
+  margin-top: 15px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s, transform 0.1s;
+}
+
+.modal-container button.save-btn {
+  background: #007bff;
+  color: #fff;
+}
+
+.modal-container button.save-btn:hover {
+  background: #0056b3;
+}
+
+.modal-container button.cancel-btn {
+  background: #6c757d;
+  color: #fff;
+}
+
+.modal-container button.cancel-btn:hover {
+  background: #5a6268;
+}
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Animation for the modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
