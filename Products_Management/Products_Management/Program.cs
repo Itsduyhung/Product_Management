@@ -30,7 +30,7 @@ namespace Products_Management
                 options.AddPolicy("AllowReactApp",
                     policy =>
                     {
-                        policy.WithOrigins("https://product-management-4.onrender.com")
+                        policy.WithOrigins("https://product-management-delta-virid.vercel.app")
                               .AllowAnyHeader()
                               .AllowAnyMethod();
                     });
