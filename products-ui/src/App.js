@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API_URL = "https://product-management-4.onrender.com";
+const API_URL = "https://product-management-4.onrender.com/api/products";
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -16,25 +16,36 @@ function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     axios
       .get(API_URL)
-      .then((res) => setProducts(res.data))
-      .catch((err) => console.error("Error fetching products:", err));
+      .then((res) => {
+        console.log('✅ Products loaded:', res.data);
+        setProducts(Array.isArray(res.data) ? res.data : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching products:", err);
+        setError("Failed to load products. Please try again.");
+        setLoading(false);
+      });
   }, []);
 
   const handleView = (id) => {
-    setError(""); // Xóa lỗi cũ
+    setError("");
     axios.get(`${API_URL}/${id}`).then((res) => {
       setFormData(res.data);
       setSelectedId(id);
       setIsEditing(false);
       setShowForm(true);
+    }).catch((err) => {
+      setError("Error loading product details: " + err.message);
     });
   };
 
-  // (Validation)
   const validateForm = () => {
     if (!formData.name) {
       setError("Product Name is required!");
@@ -68,10 +79,13 @@ function App() {
     if (formData.image) data.append("ImageUrl", formData.image);
 
     axios
-      .post(API_URL, data, { headers: { "Content-Type": "multipart/form-data" } })
+      .post(API_URL, data, { 
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true 
+      })
       .then(() => window.location.reload())
       .catch((err) => {
-        setError("Error adding product: " + err.message);
+        setError("Error adding product: " + (err.response?.data?.message || err.message));
       });
   };
 
@@ -87,15 +101,25 @@ function App() {
     if (formData.image) data.append("ImageUrl", formData.image);
 
     axios
-      .put(`${API_URL}/${selectedId}`, data, { headers: { "Content-Type": "multipart/form-data" } })
+      .put(`${API_URL}/${selectedId}`, data, { 
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true
+      })
       .then(() => window.location.reload())
       .catch((err) => {
-        setError("Error updating product: " + err.message);
+        setError("Error updating product: " + (err.response?.data?.message || err.message));
       });
   };
 
   const handleDelete = (id) => {
-    axios.delete(`${API_URL}/${id}`).then(() => window.location.reload());
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      axios
+        .delete(`${API_URL}/${id}`, { withCredentials: true })
+        .then(() => window.location.reload())
+        .catch((err) => {
+          setError("Error deleting product: " + err.message);
+        });
+    }
   };
 
   return (
@@ -116,29 +140,37 @@ function App() {
         </button>
       </header>
 
-      <div className="product-list">
-        {products.map((item) => (
-          <div key={item.id} className="product-card">
-            <img src={item.imageUrl} alt={item.name} className="product-img" />
-            <h3>{item.name}</h3>
-            <div className="actions">
-              <button onClick={() => handleView(item.id)}>👁 View</button>
-              <button
-                onClick={() => {
-                  setFormData(item);
-                  setSelectedId(item.id);
-                  setIsEditing(true);
-                  setShowForm(true);
-                  setError("");
-                }}
-              >
-                ✏ Update
-              </button>
-              <button onClick={() => handleDelete(item.id)}>🗑 Delete</button>
+      {loading ? (
+        <div className="loading">Loading products...</div>
+      ) : error && products.length === 0 ? (
+        <div className="error-message">{error}</div>
+      ) : products.length === 0 ? (
+        <div className="empty-state">No products found. Add your first product!</div>
+      ) : (
+        <div className="product-list">
+          {products.map((item) => (
+            <div key={item.id} className="product-card">
+              <img src={item.imageUrl} alt={item.name} className="product-img" />
+              <h3>{item.name}</h3>
+              <div className="actions">
+                <button onClick={() => handleView(item.id)}>👁 View</button>
+                <button
+                  onClick={() => {
+                    setFormData(item);
+                    setSelectedId(item.id);
+                    setIsEditing(true);
+                    setShowForm(true);
+                    setError("");
+                  }}
+                >
+                  ✏ Update
+                </button>
+                <button onClick={() => handleDelete(item.id)}>🗑 Delete</button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
@@ -188,24 +220,25 @@ function App() {
                 disabled={!isEditing}
               />
 
-              {formData.image &&
-                (typeof formData.image === "string" ? (
-                  <img src={formData.image} alt="preview" className="preview-img" />
-                ) : (
-                  <img
-                    src={URL.createObjectURL(formData.image)}
-                    alt="preview"
-                    className="preview-img"
-                  />
-                ))}
+              {formData.imageUrl && !formData.image && (
+                <img src={formData.imageUrl} alt="preview" className="preview-img" />
+              )}
+              
+              {formData.image && (
+                <img
+                  src={URL.createObjectURL(formData.image)}
+                  alt="preview"
+                  className="preview-img"
+                />
+              )}
 
               {isEditing && (
                 <button type="submit" className="save-btn">
-                   Save
+                  💾 Save
                 </button>
               )}
               <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>
-                 Close
+                ❌ Close
               </button>
             </form>
           </div>
