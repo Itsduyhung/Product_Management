@@ -24,16 +24,19 @@ namespace Products_Management
                             .AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<EntityRequestValidator>();
 
-            // React CORS
+            // CORS cho React (local + vercel)
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowReactApp",
-                    policy =>
-                    {
-                        policy.WithOrigins("https://product-management-delta-virid.vercel.app")
-                              .AllowAnyHeader()
-                              .AllowAnyMethod();
-                    });
+                options.AddPolicy("AllowReactApp", policy =>
+                {
+                    policy.SetIsOriginAllowed(origin =>
+                        origin.StartsWith("http://localhost:3000") ||
+                        origin.EndsWith(".vercel.app")
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+                });
             });
 
             // PostgreSQL
@@ -63,11 +66,14 @@ namespace Products_Management
                 c.RoutePrefix = string.Empty; // Swagger UI ở "/"
             });
 
-            // ⚠️ Tạm thời tắt HTTPS redirect trong Docker để tránh lỗi
+            // ⚠️ Không dùng HTTPS redirect trong Docker
             // app.UseHttpsRedirection();
 
+            // Routing + CORS + Auth
+            app.UseRouting();
             app.UseCors("AllowReactApp");
             app.UseAuthorization();
+
             app.MapControllers();
 
             app.Run();
