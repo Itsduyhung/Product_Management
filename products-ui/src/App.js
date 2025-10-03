@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API_URL = "https://localhost:7052/api/Entity";
+const API_URL = "https://product-management-4.onrender.com";
 
 function App() {
   const [products, setProducts] = useState([]);
