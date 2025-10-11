@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
-import Loading from "./loding"; // ✅ import class component Loading
+import Loading from "./loading"; // ✅ import class component Loading
 
 const API_URL = "https://product-management-4.onrender.com/api/products";
 
