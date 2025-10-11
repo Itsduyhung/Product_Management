@@ -174,8 +174,8 @@ function App() {
       )}
 
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="custom-modal-overlay" onClick={() => setShowForm(false)}>
+          <div className="custom-modal-container" onClick={(e) => e.stopPropagation()}>
             <h2>
               {isEditing ? (selectedId ? "Update Product" : "Add Product") : "View Product"}
             </h2>

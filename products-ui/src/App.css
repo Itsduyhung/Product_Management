@@ -1,242 +1,143 @@
-/* General app layout */
-.app-container {
-  font-family: Arial, sans-serif;
-  padding: 20px;
-  background-color: #f4f7f9;
-  min-height: 100vh;
+/* ========== Reset CSS để tránh ảnh hưởng từ Google UI, Bootstrap, MUI ========== */
+* {
+  box-sizing: border-box;
 }
 
-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-header h1 {
-  color: #333;
-  margin-bottom: 10px;
-}
-
-.add-btn {
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s;
-}
-
-.add-btn:hover {
-  background-color: #218838;
-}
-
-/* Product list layout */
-.product-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-  justify-content: center;
-}
-
-.product-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  text-align: center;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
-.product-img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-
-.product-card h3 {
-  font-size: 18px;
-  color: #333;
-  padding: 10px;
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 100%;
   margin: 0;
 }
 
-.actions {
-  display: flex;
-  justify-content: space-around;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+:root {
+  --mui-modal-zIndex: 0; /* nếu có xung đột với Material UI */
 }
 
-.actions button {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color 0.3s;
-}
-
-.actions button:first-of-type {
-  background-color: #17a2b8;
-  color: #fff;
-}
-
-.actions button:first-of-type:hover {
-  background-color: #138496;
-}
-
-.actions button:nth-of-type(2) {
-  background-color: #ffc107;
+/* ========== Toàn bộ layout chính của ứng dụng ========== */
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background-color: #f9fafb;
   color: #333;
 }
 
-.actions button:nth-of-type(2):hover {
-  background-color: #e0a800;
+/* Nút mở modal */
+.open-modal-btn {
+  background-color: #2563eb;
+  color: white;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  font-weight: 500;
 }
 
-.actions button:last-of-type {
-  background-color: #dc3545;
-  color: #fff;
+.open-modal-btn:hover {
+  background-color: #1e40af;
 }
 
-.actions button:last-of-type:hover {
-  background-color: #c82333;
-}
-
-/* Modal UI */
-
-/* Overlay to darken the background */
-.modal-overlay {
+/* ========== Custom Modal (đã đổi tên class tránh trùng) ========== */
+.custom-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 1000;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeInOverlay 0.25s ease-in-out;
 }
 
-/* Modal container (the form itself) */
-.modal-container {
+.custom-modal-container {
   background: #fff;
   padding: 25px;
   border-radius: 12px;
   width: 400px;
   max-width: 90%;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-  animation: fadeIn 0.3s ease-in-out;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+  animation: modalFadeIn 0.3s ease-in-out;
 }
 
-.modal-container h2 {
-  margin-bottom: 15px;
+.custom-modal-container h2 {
   text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-}
-
-.modal-container form {
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-container label {
+  color: #222;
+  margin-bottom: 15px;
   font-weight: 600;
-  margin-top: 10px;
-  margin-bottom: 5px;
-  color: #555;
+  font-size: 20px;
 }
 
-.modal-container input {
+/* ========== Nút đóng modal ========== */
+.close-btn {
+  display: block;
   width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  font-size: 16px;
-  transition: border-color 0.3s;
-}
-
-.modal-container input:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-.modal-container input:disabled {
-  background-color: #f0f0f0;
-  cursor: not-allowed;
-}
-
-.modal-container .preview-img {
-  width: 100%;
-  height: auto;
-  max-height: 200px;
-  object-fit: contain;
-  border-radius: 8px;
   margin-top: 15px;
-  border: 1px solid #ddd;
-}
-
-.modal-container button {
-  margin-top: 15px;
-  padding: 12px 20px;
+  background-color: #e11d48;
+  color: white;
   border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  transition: background-color 0.3s, transform 0.1s;
-}
-
-.modal-container button.save-btn {
-  background: #007bff;
-  color: #fff;
-}
-
-.modal-container button.save-btn:hover {
-  background: #0056b3;
-}
-
-.modal-container button.cancel-btn {
-  background: #6c757d;
-  color: #fff;
-}
-
-.modal-container button.cancel-btn:hover {
-  background: #5a6268;
-}
-.error-message {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
   padding: 10px;
-  margin-bottom: 15px;
   border-radius: 6px;
-  font-size: 14px;
-  text-align: center;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
 }
 
-/* Animation for the modal */
-@keyframes fadeIn {
+.close-btn:hover {
+  background-color: #be123c;
+}
+
+/* ========== Hiệu ứng animation ========== */
+@keyframes modalFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(-15px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== Loading Spinner (nếu bạn dùng component loading.js) ========== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #ccc;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
