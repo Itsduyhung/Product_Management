@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
+import Loading from "./loding"; // ✅ import class component Loading
 
 const API_URL = "https://product-management-4.onrender.com/api/products";
 
@@ -141,7 +142,7 @@ function App() {
       </header>
 
       {loading ? (
-        <div className="loading">Loading products...</div>
+        <Loading />
       ) : error && products.length === 0 ? (
         <div className="error-message">{error}</div>
       ) : products.length === 0 ? (
