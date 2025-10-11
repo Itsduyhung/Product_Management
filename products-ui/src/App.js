@@ -234,11 +234,11 @@ function App() {
 
               {isEditing && (
                 <button type="submit" className="save-btn">
-                  💾 Save
+                   Save
                 </button>
               )}
               <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>
-                ❌ Close
+                 Close
               </button>
             </form>
           </div>

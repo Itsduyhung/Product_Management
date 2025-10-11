@@ -2031,7 +2031,8 @@
         "lib/netstandard1.0/Humanizer.xml",
         "lib/netstandard2.0/Humanizer.dll",
         "lib/netstandard2.0/Humanizer.xml",
-        "logo.png"
+        "logo.png",
+        "product.png"
       ]
     },
     "Microsoft.Bcl.AsyncInterfaces/7.0.0": {
