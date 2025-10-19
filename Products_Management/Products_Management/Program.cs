@@ -1,8 +1,16 @@
-﻿using FluentValidation;
+﻿using CloudinaryDotNet;
+using FluentValidation;
 using FluentValidation.AspNetCore;
-using Products_Management.API;
-using CloudinaryDotNet;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Products_Management.Configuration;
+using Products_Management.DTOs.Request;
+using Products_Management.Repository;
+using Products_Management.Repository.Interface;
+using Products_Management.Service;
+using Products_Management.Services.Interfaces;
+using System.Text;
 
 namespace Products_Management
 {
@@ -12,6 +20,7 @@ namespace Products_Management
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // ===== CONTROLLERS & SWAGGER =====
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -19,43 +28,41 @@ namespace Products_Management
                 c.SwaggerDoc("v1", new() { Title = "Products Management API", Version = "v1" });
             });
 
+            // ===== FLUENT VALIDATION =====
             builder.Services.AddFluentValidationAutoValidation()
                             .AddFluentValidationClientsideAdapters();
-            builder.Services.AddValidatorsFromAssemblyContaining<EntityRequestValidator>();
+            builder.Services.AddValidatorsFromAssemblyContaining<ProductRequestValidator>();
 
-            // ===== CORS CONFIGURATION - AGGRESSIVE MODE =====
+            // ===== CORS CONFIGURATION =====
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowReactApp", policy =>
                 {
                     policy.SetIsOriginAllowed(origin =>
                     {
-                        // Log để debug
                         Console.WriteLine($"🔍 Origin: {origin}");
 
-                        // Allow localhost
                         if (origin.Contains("localhost")) return true;
-
-                        // Allow Vercel
                         if (origin.Contains("vercel.app")) return true;
-
                         return false;
                     })
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
                 });
             });
 
-            // PostgreSQL
+            // ===== DATABASE: PostgreSQL =====
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // Repository + Service
+            // ===== REPOSITORY + SERVICE =====
             builder.Services.AddScoped<IEntityRepository, EntityRepository>();
             builder.Services.AddScoped<IEntityService, EntityService>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
-            // Cloudinary
+            // ===== CLOUDINARY =====
             var cloudName = builder.Configuration["CloudinarySettings:CloudName"];
             var apiKey = builder.Configuration["CloudinarySettings:ApiKey"];
             var apiSecret = builder.Configuration["CloudinarySettings:ApiSecret"];
@@ -63,9 +70,35 @@ namespace Products_Management
             var cloudinary = new Cloudinary(account) { Api = { Secure = true } };
             builder.Services.AddSingleton(cloudinary);
 
+            // ===== JWT CONFIGURATION =====
+            var jwtSettings = builder.Configuration.GetSection("Jwt");
+            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSettings["Issuer"],
+                    ValidAudience = jwtSettings["Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ClockSkew = TimeSpan.Zero // tránh trễ thời gian token
+                };
+            });
+
+            builder.Services.AddAuthorization();
+
             var app = builder.Build();
 
-            // ===== MANUAL CORS HEADERS - Fallback solution =====
+            // ===== GLOBAL EXCEPTION & CORS HEADERS =====
             app.Use(async (context, next) =>
             {
                 var origin = context.Request.Headers["Origin"].ToString();
@@ -79,7 +112,6 @@ namespace Products_Management
                     context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
                 }
 
-                // Handle preflight
                 if (context.Request.Method == "OPTIONS")
                 {
                     context.Response.StatusCode = 204;
@@ -89,19 +121,22 @@ namespace Products_Management
                 await next();
             });
 
-            // Swagger
+            // ===== SWAGGER =====
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Products Management API v1");
-                c.RoutePrefix = string.Empty;
+                c.RoutePrefix = string.Empty; // mở Swagger ở root
             });
 
-            // CORS Policy
+            // ===== MIDDLEWARE PIPELINE =====
+            app.UseHttpsRedirection();
             app.UseCors("AllowReactApp");
-
             app.UseRouting();
+
+            app.UseAuthentication(); // ✅ phải đặt trước Authorization
             app.UseAuthorization();
+
             app.MapControllers();
 
             app.Run();

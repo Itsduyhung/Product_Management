@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 
-namespace Products_Management.API
+namespace Products_Management.DTOs.Request
 {
     public class EntityRequest
     {

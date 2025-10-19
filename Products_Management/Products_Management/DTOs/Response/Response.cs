@@ -1,4 +1,4 @@
-﻿namespace Products_Management.API
+﻿namespace Products_Management.DTOs.Response
 {
     public class EntityResponse
     {

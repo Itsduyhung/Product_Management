@@ -1,13 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-namespace Products_Management.API
+using Products_Management.Model;
+
+namespace Products_Management.Configuration
 {
-    public class EntityConfiguration : IEntityTypeConfiguration<Entity>
+    public class EntityConfiguration : IEntityTypeConfiguration<ProductEntity>
     {
-        public void Configure(EntityTypeBuilder<Entity> builder)
+        public void Configure(EntityTypeBuilder<ProductEntity> builder)
         {
             // Correctly map the table name
-            builder.ToTable("Entity");
+            builder.ToTable("products");
 
             // Primary Key
             builder.HasKey(e => e.Id);

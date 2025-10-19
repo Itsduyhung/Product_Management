@@ -1,8 +1,11 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Mvc;
+using Products_Management.DTOs.Request;
+using Products_Management.DTOs.Response;
+using Products_Management.Service;
 
-namespace Products_Management.API
+namespace Products_Management.Controller
 {
     [ApiController]
     [Route("api/products")]

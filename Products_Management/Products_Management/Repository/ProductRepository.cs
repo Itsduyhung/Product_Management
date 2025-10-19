@@ -1,14 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Products_Management.API;
+using Products_Management.Configuration;
+using Products_Management.Model;
 
-namespace Products_Management.API
+namespace Products_Management.Repository
 {
     public interface IEntityRepository
     {
-        Task<List<Entity>> GetAllAsync();
-        Task<Entity?> GetByIdAsync(int id);
-        Task<Entity> AddAsync(Entity entity);
-        Task<Entity?> UpdateAsync(Entity entity);
+        Task<List<ProductEntity>> GetAllAsync();
+        Task<ProductEntity?> GetByIdAsync(int id);
+        Task<ProductEntity> AddAsync(ProductEntity entity);
+        Task<ProductEntity?> UpdateAsync(ProductEntity entity);
         Task<bool> DeleteAsync(int id);
     }
 
@@ -21,20 +22,20 @@ namespace Products_Management.API
             _context = context;
         }
 
-        public async Task<List<Entity>> GetAllAsync() =>
+        public async Task<List<ProductEntity>> GetAllAsync() =>
             await _context.Entities.ToListAsync();
 
-        public async Task<Entity?> GetByIdAsync(int id) =>
+        public async Task<ProductEntity?> GetByIdAsync(int id) =>
             await _context.Entities.FindAsync(id);
 
-        public async Task<Entity> AddAsync(Entity entity)
+        public async Task<ProductEntity> AddAsync(ProductEntity entity)
         {
             _context.Entities.Add(entity);
             await _context.SaveChangesAsync();
             return entity;
         }
 
-        public async Task<Entity?> UpdateAsync(Entity entity)
+        public async Task<ProductEntity?> UpdateAsync(ProductEntity entity)
         {
             var existing = await _context.Entities.FindAsync(entity.Id);
             if (existing == null) return null;

@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace Products_Management.API
+namespace Products_Management.DTOs.Request
 {
-    public class EntityRequestValidator : AbstractValidator<EntityRequest>
+    public class ProductRequestValidator : AbstractValidator<EntityRequest>
     {
-        public EntityRequestValidator()
+        public ProductRequestValidator()
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required")

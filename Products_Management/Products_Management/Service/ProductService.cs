@@ -1,4 +1,9 @@
-﻿namespace Products_Management.API
+﻿using Products_Management.DTOs.Request;
+using Products_Management.DTOs.Response;
+using Products_Management.Repository;
+using Products_Management.Model;
+
+namespace Products_Management.Service
 {
     public interface IEntityService
     {
@@ -48,7 +53,7 @@
 
         public async Task<EntityResponse> AddAsync(EntityRequest request, string? imgUrl)
         {
-            var entity = new Entity
+            var entity = new ProductEntity
             {
                 Name = request.Name,
                 Description = request.Description,
@@ -70,7 +75,7 @@
 
         public async Task<EntityResponse?> UpdateAsync(int id, EntityRequest request, string? imgUrl)
         {
-            var entity = new Entity
+            var entity = new ProductEntity
             {
                 Id = id,
                 Name = request.Name,

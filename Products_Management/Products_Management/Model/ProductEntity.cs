@@ -1,6 +1,6 @@
-﻿namespace Products_Management.API
+﻿namespace Products_Management.Model
 {
-    public class Entity
+    public class ProductEntity
 {
     public int Id { get; set; }
     public string Name { get; set; }
