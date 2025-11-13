@@ -9,6 +9,7 @@ using Products_Management.DTOs.Request;
 using Products_Management.Repository;
 using Products_Management.Repository.Interface;
 using Products_Management.Service;
+using Products_Management.Service.Interface;
 using Products_Management.Services.Interfaces;
 using System.Text;
 
@@ -26,7 +27,34 @@ namespace Products_Management
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new() { Title = "Products Management API", Version = "v1" });
+
+                // 🔒 Thêm cấu hình JWT Bearer cho Swagger
+                c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Description = "Nhập token theo định dạng: Bearer {your JWT token}"
+                });
+
+                c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
             });
+
 
             // ===== FLUENT VALIDATION =====
             builder.Services.AddFluentValidationAutoValidation()
@@ -52,6 +80,15 @@ namespace Products_Management
                 });
             });
 
+            // ===== LOGGING =====
+            builder.Services.AddLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddConsole();
+                logging.AddDebug();
+                logging.SetMinimumLevel(LogLevel.Debug);
+            });
+
             // ===== DATABASE: PostgreSQL =====
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -61,6 +98,17 @@ namespace Products_Management
             builder.Services.AddScoped<IEntityService, EntityService>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<ICartRepository, CartRepository>();
+            builder.Services.AddHttpClient();
+            builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+            builder.Services.AddScoped<PayOSService>();
+
+            // Configure PayOS HttpClient
+            builder.Services.AddHttpClient("PayOS", client =>
+            {
+                client.BaseAddress = new Uri("https://api-merchant.payos.vn");
+            });
 
             // ===== CLOUDINARY =====
             var cloudName = builder.Configuration["CloudinarySettings:CloudName"];
@@ -72,7 +120,8 @@ namespace Products_Management
 
             // ===== JWT CONFIGURATION =====
             var jwtSettings = builder.Configuration.GetSection("Jwt");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+            var jwtKey = jwtSettings["Key"] ?? throw new ArgumentNullException("JWT Key is missing in configuration");
+            var key = Encoding.UTF8.GetBytes(jwtKey);
 
             builder.Services.AddAuthentication(options =>
             {
@@ -106,10 +155,10 @@ namespace Products_Management
                 if (!string.IsNullOrEmpty(origin) &&
                     (origin.Contains("localhost") || origin.Contains("vercel.app")))
                 {
-                    context.Response.Headers.Add("Access-Control-Allow-Origin", origin);
-                    context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
-                    context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-                    context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                    context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+                    context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+                    context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With";
+                    context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
                 }
 
                 if (context.Request.Method == "OPTIONS")
@@ -126,11 +175,15 @@ namespace Products_Management
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Products Management API v1");
-                c.RoutePrefix = string.Empty; // mở Swagger ở root
+                // Serve the Swagger UI at /swagger (matches launchSettings launchUrl)
+                c.RoutePrefix = "swagger";
             });
 
             // ===== MIDDLEWARE PIPELINE =====
-            app.UseHttpsRedirection();
+            if (!app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
             app.UseCors("AllowReactApp");
             app.UseRouting();
 
@@ -138,6 +191,9 @@ namespace Products_Management
             app.UseAuthorization();
 
             app.MapControllers();
+
+            // Redirect root path to Swagger UI
+            app.MapGet("/", () => Results.Redirect("/swagger"));
 
             app.Run();
         }

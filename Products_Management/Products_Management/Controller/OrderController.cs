@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Net.payOS;
-using Net.payOS.Types;
 using Products_Management.DTOs.Request;
 using Products_Management.DTOs.Response;
 using Products_Management.Helper;

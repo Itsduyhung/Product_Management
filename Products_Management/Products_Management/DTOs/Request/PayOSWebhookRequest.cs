@@ -1,9 +1,9 @@
-﻿using Net.payOS.Types;
-
-namespace Products_Management.DTOs.Request
+﻿namespace Products_Management.DTOs.Request
 {
+    // PayOSWebhookRequest - không còn dùng, đã thay bằng PaymentCallbackRequest
+    // Giữ lại để tránh breaking changes nếu có code khác đang dùng
     public class PayOSWebhookRequest
     {
-        public WebhookType Data { get; set; } // dùng kiểu của PayOS SDK
+        public PaymentCallbackRequest? Data { get; set; }
     }
 }
