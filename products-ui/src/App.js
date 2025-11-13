@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
-import Loading from "./loading.css"; // ✅ import class component Loading
+import Loading from "./loading"; // Import Loading component
+import { addToCart } from "./api";
+import { PRODUCTS_API } from "./config";
 
-const API_URL = "https://product-management-4.onrender.com/api/products";
+const API_URL = PRODUCTS_API;
 
 function App() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -18,6 +22,8 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     setLoading(true);
@@ -37,6 +43,7 @@ function App() {
 
   const handleView = (id) => {
     setError("");
+    setQuantity(1);
     axios.get(`${API_URL}/${id}`).then((res) => {
       setFormData(res.data);
       setSelectedId(id);
@@ -123,22 +130,96 @@ function App() {
     }
   };
 
+  const handleAddToCart = async () => {
+    if (!selectedId) return;
+    
+    setIsAddingToCart(true);
+    setError("");
+
+    try {
+      await addToCart(selectedId, quantity);
+      alert("Đã thêm vào giỏ hàng thành công!");
+      setShowForm(false);
+    } catch (error) {
+      setError(
+        error.response?.data?.message || 
+        "Không thể thêm vào giỏ hàng. Vui lòng đăng nhập lại."
+      );
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!selectedId) return;
+    
+    setIsAddingToCart(true);
+    setError("");
+
+    try {
+      await addToCart(selectedId, quantity);
+      setShowForm(false);
+      navigate("/cart");
+    } catch (error) {
+      setError(
+        error.response?.data?.message || 
+        "Không thể thêm vào giỏ hàng. Vui lòng đăng nhập lại."
+      );
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const isAuthenticated = () => {
+    return !!localStorage.getItem('token');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('email');
+    navigate('/login');
+  };
+
   return (
     <div className="app-container">
       <header>
         <h1>Product Management</h1>
-        <button
-          className="add-btn"
-          onClick={() => {
-            setFormData({ name: "", description: "", price: "", image: null });
-            setShowForm(true);
-            setIsEditing(true);
-            setSelectedId(null);
-            setError("");
-          }}
-        >
-          ➕ Add Product
-        </button>
+        <div className="header-actions">
+          {isAuthenticated() ? (
+            <>
+              <span className="user-info">
+                Xin chào, {localStorage.getItem('username') || 'User'}!
+              </span>
+              <button className="logout-btn" onClick={handleLogout}>
+                Đăng xuất
+              </button>
+              <button
+                className="add-btn"
+                onClick={() => {
+                  setFormData({ name: "", description: "", price: "", image: null });
+                  setShowForm(true);
+                  setIsEditing(true);
+                  setSelectedId(null);
+                  setError("");
+                  setQuantity(1);
+                }}
+              >
+                ➕ Add Product
+              </button>
+            </>
+          ) : (
+            <div className="auth-buttons">
+              <button className="login-btn" onClick={() => navigate('/login')}>
+                Đăng nhập
+              </button>
+              <button className="register-btn" onClick={() => navigate('/register')}>
+                Đăng ký
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {loading ? (
@@ -152,7 +233,20 @@ function App() {
           {products.map((item) => (
             <div key={item.id} className="product-card">
               <img src={item.imageUrl} alt={item.name} className="product-img" />
-              <h3>{item.name}</h3>
+              <div className="product-info">
+                <h3>{item.name}</h3>
+                {item.description && (
+                  <p className="product-description">{item.description}</p>
+                )}
+                {item.price && (
+                  <p className="product-price">
+                    {new Intl.NumberFormat('vi-VN', {
+                      style: 'currency',
+                      currency: 'VND'
+                    }).format(item.price)}
+                  </p>
+                )}
+              </div>
               <div className="actions">
                 <button onClick={() => handleView(item.id)}>👁 View</button>
                 <button
@@ -238,6 +332,45 @@ function App() {
                    Save
                 </button>
               )}
+
+              {/* Add to Cart section - chỉ hiển thị khi View (không phải Edit) */}
+              {!isEditing && selectedId && (
+                <div className="cart-actions">
+                  <label>Số lượng:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <div className="cart-buttons">
+                    <button
+                      type="button"
+                      onClick={handleAddToCart}
+                      disabled={isAddingToCart}
+                      className="add-to-cart-btn"
+                    >
+                      {isAddingToCart ? "Đang thêm..." : "🛒 Thêm vào giỏ hàng"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBuyNow}
+                      disabled={isAddingToCart}
+                      className="buy-now-btn"
+                    >
+                      💳 Mua ngay & Thanh toán
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>
                  Close
               </button>
