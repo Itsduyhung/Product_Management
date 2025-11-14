@@ -11,21 +11,26 @@ COPY *.sln ./
 # Copy toàn bộ source code
 COPY . .
 
-# Xóa thư mục bin và obj để tránh xung đột với build cũ
-RUN find . -type d -name bin -prune -exec rm -rf {} \; 2>/dev/null || true && \
-    find . -type d -name obj -prune -exec rm -rf {} \; 2>/dev/null || true
+# Xóa thư mục bin và obj để tránh xung đột với build cũ và cache restore
+RUN rm -rf **/bin **/obj 2>/dev/null || true && \
+    find . -type d -name bin -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type d -name obj -exec rm -rf {} + 2>/dev/null || true
 
-# Restore packages trước (đảm bảo PayOS được restore)
+# Xóa NuGet cache để force restore lại tất cả packages
+RUN dotnet nuget locals all --clear || true
+
+# Xóa các file cache restore cụ thể
+RUN find . -name "project.assets.json" -delete 2>/dev/null || true && \
+    find . -name "project.nuget.cache" -delete 2>/dev/null || true && \
+    find . -name "*.nuget.props" -delete 2>/dev/null || true && \
+    find . -name "*.nuget.targets" -delete 2>/dev/null || true
+
+# Restore packages trước (đảm bảo PayOS được restore) - force restore không dùng cache
 RUN dotnet restore "Products_Management/Products_Management.csproj" \
     --source https://api.nuget.org/v3/index.json \
+    --force \
     --no-cache \
-    --verbosity detailed || \
-    (echo "Restore failed, trying to add PayOS package explicitly..." && \
-     dotnet add "Products_Management/Products_Management.csproj" package payOS --version 2.0.1 --source https://api.nuget.org/v3/index.json && \
-     dotnet restore "Products_Management/Products_Management.csproj" \
-     --source https://api.nuget.org/v3/index.json \
-     --no-cache \
-     --verbosity detailed)
+    --verbosity detailed
 
 # Verify PayOS package được restore (list packages để check)
 RUN dotnet list "Products_Management/Products_Management.csproj" package | grep -i payos || echo "Warning: PayOS package not found in list"
