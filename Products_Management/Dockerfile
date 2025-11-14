@@ -5,25 +5,22 @@ WORKDIR /src
 # Copy NuGet.config để specify NuGet source (nếu có)
 COPY nuget.config* ./
 
-# Copy csproj và restore dependency
-COPY ["Products_Management/Products_Management.csproj", "Products_Management/"]
-# Restore packages với NuGet.org source - đảm bảo PayOS được restore
-RUN dotnet restore "Products_Management/Products_Management.csproj" \
-    --source https://api.nuget.org/v3/index.json \
-    --verbosity detailed
+# Copy solution file nếu có
+COPY *.sln ./
 
 # Copy toàn bộ source code
 COPY . .
 
-# Restore lại sau khi copy toàn bộ source code để đảm bảo tất cả packages được tải
+# Restore packages trước (đảm bảo PayOS được restore)
 RUN dotnet restore "Products_Management/Products_Management.csproj" \
     --source https://api.nuget.org/v3/index.json \
-    --force \
+    --no-cache \
     --verbosity detailed
 
-# Publish ra thư mục /app/publish
+# Publish (publish sẽ tự động restore nếu cần)
 RUN dotnet publish "Products_Management/Products_Management.csproj" -c Release -o /app/publish \
     --source https://api.nuget.org/v3/index.json \
+    --no-cache \
     --verbosity detailed
 
 # Stage 2: Runtime
