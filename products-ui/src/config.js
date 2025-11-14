@@ -2,7 +2,7 @@
 // Đổi giá trị này để switch giữa local và production
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-const USE_LOCAL = true; // Set thành false để dùng production API
+const USE_LOCAL = false; // Set thành false để dùng production API
 
 // Local API (khi backend chạy local)
 const LOCAL_API_BASE = 'http://localhost:5000/api';

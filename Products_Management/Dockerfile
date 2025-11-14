@@ -8,22 +8,33 @@ COPY nuget.config* ./
 # Copy solution file nếu có
 COPY *.sln ./
 
-# Copy toàn bộ source code
+# Copy toàn bộ source code (obj và bin đã được ignore bởi .dockerignore)
 COPY . .
 
-# Xóa thư mục bin và obj để tránh xung đột với build cũ và cache restore
-RUN rm -rf **/bin **/obj 2>/dev/null || true && \
-    find . -type d -name bin -exec rm -rf {} + 2>/dev/null || true && \
-    find . -type d -name obj -exec rm -rf {} + 2>/dev/null || true
+# Xóa thư mục bin và obj nếu có (để đảm bảo sạch sẽ)
+RUN find . -type d \( -name bin -o -name obj \) -exec rm -rf {} + 2>/dev/null || true
 
-# Xóa NuGet cache để force restore lại tất cả packages
+# Xóa TẤT CẢ các file restore cache TRƯỚC TIÊN (phải xóa để force restore lại)
+RUN echo "=== Deleting restore cache files ===" && \
+    rm -rf Products_Management/obj/project.assets.json 2>/dev/null || true && \
+    rm -rf Products_Management/obj/project.nuget.cache 2>/dev/null || true && \
+    rm -rf Products_Management/obj/*.nuget.props 2>/dev/null || true && \
+    rm -rf Products_Management/obj/*.nuget.targets 2>/dev/null || true && \
+    find . -type f -name "project.assets.json" -delete 2>/dev/null || true && \
+    find . -type f -name "project.nuget.cache" -delete 2>/dev/null || true && \
+    find . -type f -name "*.nuget.props" -delete 2>/dev/null || true && \
+    find . -type f -name "*.nuget.targets" -delete 2>/dev/null || true && \
+    find . -type d -name ".nuget" -exec rm -rf {} + 2>/dev/null || true && \
+    echo "✓ All restore cache files deleted"
+
+# Xóa NuGet cache global để force restore lại tất cả packages
 RUN dotnet nuget locals all --clear || true
 
-# Xóa các file cache restore cụ thể
-RUN find . -name "project.assets.json" -delete 2>/dev/null || true && \
-    find . -name "project.nuget.cache" -delete 2>/dev/null || true && \
-    find . -name "*.nuget.props" -delete 2>/dev/null || true && \
-    find . -name "*.nuget.targets" -delete 2>/dev/null || true
+# Verify đã xóa cache (không còn project.assets.json)
+RUN echo "=== Verifying cache files are deleted ===" && \
+    (find . -name "project.assets.json" 2>/dev/null | wc -l | xargs test 0 -eq) && \
+    echo "✓ Cache files successfully deleted" || \
+    echo "⚠ Warning: Some cache files may still exist"
 
 # Restore packages trước (đảm bảo PayOS được restore) - force restore không dùng cache
 RUN dotnet restore "Products_Management/Products_Management.csproj" \

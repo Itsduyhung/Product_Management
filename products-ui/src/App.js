@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
 import Loading from "./loading"; // Import Loading component
-import { addToCart } from "./api";
+import { addToCart, fetchCart } from "./api";
 import { PRODUCTS_API } from "./config";
 
 const API_URL = PRODUCTS_API;
@@ -24,6 +24,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [cartItemCount, setCartItemCount] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -39,6 +40,38 @@ function App() {
         setError("Failed to load products. Please try again.");
         setLoading(false);
       });
+  }, []);
+
+  // Fetch cart count when authenticated
+  useEffect(() => {
+    const loadCartCount = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setCartItemCount(0);
+        return;
+      }
+
+      try {
+        const cartData = await fetchCart();
+        // Backend trả về array trực tiếp
+        let items = [];
+        if (Array.isArray(cartData)) {
+          items = cartData;
+        } else if (cartData?.items && Array.isArray(cartData.items)) {
+          items = cartData.items;
+        }
+        const count = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        setCartItemCount(count);
+      } catch (error) {
+        console.error('Error fetching cart count:', error);
+        setCartItemCount(0);
+      }
+    };
+
+    loadCartCount();
+    // Refresh cart count every 5 seconds
+    const interval = setInterval(loadCartCount, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleView = (id) => {
@@ -140,6 +173,16 @@ function App() {
       await addToCart(selectedId, quantity);
       alert("Đã thêm vào giỏ hàng thành công!");
       setShowForm(false);
+      // Refresh cart count
+      const cartData = await fetchCart();
+      let items = [];
+      if (Array.isArray(cartData)) {
+        items = cartData;
+      } else if (cartData?.items && Array.isArray(cartData.items)) {
+        items = cartData.items;
+      }
+      const count = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      setCartItemCount(count);
     } catch (error) {
       setError(
         error.response?.data?.message || 
@@ -192,6 +235,42 @@ function App() {
               <span className="user-info">
                 Xin chào, {localStorage.getItem('username') || 'User'}!
               </span>
+              <button 
+                className="cart-btn" 
+                onClick={() => navigate('/cart')}
+                style={{
+                  position: 'relative',
+                  padding: '8px 16px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  marginRight: '10px'
+                }}
+              >
+                🛒 Giỏ hàng
+                {cartItemCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    background: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
               <button className="logout-btn" onClick={handleLogout}>
                 Đăng xuất
               </button>

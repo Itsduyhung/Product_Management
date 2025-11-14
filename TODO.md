@@ -1,0 +1,9 @@
+- [x] Install Tailwind CSS dependencies
+- [x] Initialize Tailwind config
+- [x] Update Tailwind config for content paths
+- [x] Add Tailwind directives to CSS
+- [ ] Install shadcn/ui CLI and init
+- [ ] Add shadcn components: Button, Card, Dialog, Input, Label
+- [ ] Update App.js to use shadcn components and Tailwind classes
+- [ ] Update App.css to remove custom styles and use Tailwind
+- [ ] Test the app by running npm start
