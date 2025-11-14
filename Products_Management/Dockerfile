@@ -33,23 +33,35 @@ RUN dotnet restore "Products_Management/Products_Management.csproj" \
     --verbosity detailed
 
 # Verify PayOS package được restore (list packages để check)
-RUN dotnet list "Products_Management/Products_Management.csproj" package | grep -i payos || echo "Warning: PayOS package not found in list"
+RUN echo "=== Checking packages ===" && \
+    dotnet list "Products_Management/Products_Management.csproj" package || true && \
+    echo "=== End package list ==="
+
+# Nếu PayOS không được restore, thử add lại
+RUN dotnet list "Products_Management/Products_Management.csproj" package | grep -i "payos" || \
+    (echo "PayOS not found, adding package..." && \
+     dotnet add "Products_Management/Products_Management.csproj" package payOS --version 2.0.1 --source https://api.nuget.org/v3/index.json && \
+     dotnet restore "Products_Management/Products_Management.csproj" \
+     --source https://api.nuget.org/v3/index.json \
+     --force \
+     --no-cache \
+     --verbosity detailed)
+
+# Verify PayOS DLL tồn tại sau restore
+RUN find ~/.nuget/packages -name "*PayOS*.dll" -o -name "*payOS*.dll" 2>/dev/null | head -5 || echo "Warning: PayOS DLL not found in NuGet cache"
 
 # Build project để kiểm tra compile errors trước
 RUN dotnet build "Products_Management/Products_Management.csproj" -c Release \
     --no-restore \
     --verbosity detailed || \
-    (echo "Build failed, restoring again..." && \
-     dotnet restore "Products_Management/Products_Management.csproj" \
-     --source https://api.nuget.org/v3/index.json \
-     --no-cache \
-     --verbosity detailed && \
+    (echo "Build failed with --no-restore, trying build without --no-restore..." && \
      dotnet build "Products_Management/Products_Management.csproj" -c Release \
+     --source https://api.nuget.org/v3/index.json \
      --verbosity detailed)
 
-# Publish (sẽ tự động build với packages đã restore)
+# Publish (sẽ tự động restore và build nếu cần)
 RUN dotnet publish "Products_Management/Products_Management.csproj" -c Release -o /app/publish \
-    --no-restore \
+    --source https://api.nuget.org/v3/index.json \
     --verbosity detailed
 
 # Stage 2: Runtime
