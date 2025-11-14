@@ -11,6 +11,6 @@ namespace Products_Management.Service.Interface
         Task<OrderResponse?> GetOrderByIdAsync(int orderId);
         Task<OrderResponse?> GetOrderByCodeAsync(string orderCode);
         Task UpdateOrderStatusAsync(int orderId, string status);
-        Task HandlePayOSCallbackAsync(string orderCode);
+        Task HandlePayOSCallbackAsync(string orderCode, string? webhookStatus = null);
     }
 }

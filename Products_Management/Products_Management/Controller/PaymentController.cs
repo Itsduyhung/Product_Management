@@ -30,17 +30,23 @@ namespace Products_Management.Controller
             {
                 if (string.IsNullOrEmpty(request.OrderCode))
                 {
+                    _logger.LogWarning("Webhook received without OrderCode");
                     return BadRequest(new PayOsResponse(-1, "OrderCode is required", null));
                 }
 
-                _logger.LogInformation("Received PayOS webhook for order {OrderCode}", request.OrderCode);
-                await _orderService.HandlePayOSCallbackAsync(request.OrderCode);
+                _logger.LogInformation("Received PayOS webhook for order {OrderCode} with status {Status}", 
+                    request.OrderCode, request.Status);
+
+                // Truyền status từ webhook request (nếu có) vào handler
+                // Nếu không có, handler sẽ verify từ PayOS API
+                await _orderService.HandlePayOSCallbackAsync(request.OrderCode, request.Status);
                 
                 return Ok(new PayOsResponse(0, "Webhook processed successfully", null));
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Webhook error: {Message}", e.Message);
+                _logger.LogError(e, "Webhook error for order {OrderCode}: {Message}", 
+                    request?.OrderCode ?? "unknown", e.Message);
                 return BadRequest(new PayOsResponse(-1, $"Invalid webhook data: {e.Message}", null));
             }
         }

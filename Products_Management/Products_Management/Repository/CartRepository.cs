@@ -67,6 +67,7 @@ namespace Products_Management.Repository
             return cart.Items.Select(ci => new CartItemResponse
             {
                 Id = ci.Id,
+                ProductId = ci.ProductId,
                 Quantity = ci.Quantity,
                 Price = ci.Price,
                 ProductName = ci.Product.Name
@@ -95,14 +96,53 @@ namespace Products_Management.Repository
 
         public async Task RemoveFromCartAsync(int userId, int productId)
         {
+            // Tìm cart của user
             var cart = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId);
-            if (cart == null) return;
-
-            var item = await _context.CartItems.FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId);
-            if (item != null)
+            if (cart == null)
             {
-                _context.CartItems.Remove(item);
-                await _context.SaveChangesAsync();
+                throw new Exception($"Cart not found for user {userId}");
+            }
+
+            // Tìm cart item cần xóa - dùng AsTracking() để đảm bảo EF Core track entity
+            var item = await _context.CartItems
+                .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId);
+            
+            if (item == null)
+            {
+                throw new Exception($"Cart item not found for productId {productId} in cart {cart.Id}");
+            }
+
+            // Remove item - đảm bảo entity được track đúng cách
+            // Cách 1: Dùng Remove() - EF Core sẽ tự động mark entity là Deleted
+            _context.CartItems.Remove(item);
+            
+            // Cách 2: Hoặc dùng Entry().State = EntityState.Deleted (nếu cách 1 không work)
+            // _context.Entry(item).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
+            
+            // Save changes và kiểm tra rows affected
+            var rowsAffected = await _context.SaveChangesAsync();
+            
+            // Kiểm tra xem có save được không
+            if (rowsAffected == 0)
+            {
+                // Nếu không có rows affected, có thể entity không được track đúng
+                // Thử force reload và remove lại
+                await _context.Entry(item).ReloadAsync();
+                if (await _context.CartItems.AnyAsync(ci => ci.Id == item.Id))
+                {
+                    // Nếu item vẫn còn, thử remove bằng cách khác
+                    var itemToRemove = await _context.CartItems.FindAsync(item.Id);
+                    if (itemToRemove != null)
+                    {
+                        _context.CartItems.Remove(itemToRemove);
+                        rowsAffected = await _context.SaveChangesAsync();
+                        
+                        if (rowsAffected == 0)
+                        {
+                            throw new Exception($"Failed to remove cart item after retry. CartId: {cart.Id}, ProductId: {productId}, ItemId: {item.Id}");
+                        }
+                    }
+                }
             }
         }
     }

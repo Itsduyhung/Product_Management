@@ -53,7 +53,8 @@ namespace Products_Management.Service
 
                 // b. Tạo payment link PayOS
                 var orderCode = Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper();
-                var description = $"Payment for Order #{orderCode}";
+                // PayOS requires description max 25 characters
+                var description = $"Order #{orderCode}";
                 var (paymentUrl, transactionId) = await _payOsService.CreatePaymentLinkAsync(orderCode, totalAmount, description);
                 // c. Cập nhật link thanh toán
                 await _orderRepository.UpdatePaymentInfoAsync(savedOrder.Id, orderCode, transactionId, paymentUrl);
@@ -116,33 +117,91 @@ namespace Products_Management.Service
         // ==============================
         // 💳 6. Xử lý callback từ PayOS
         // ==============================
-        public async Task HandlePayOSCallbackAsync(string orderCode)
+        // Overload: Nhận status trực tiếp từ webhook request (nếu có)
+        public async Task HandlePayOSCallbackAsync(string orderCode, string? webhookStatus = null)
         {
             var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderCode == orderCode);
             if (order == null)
+            {
+                _logger.LogWarning("Order not found for orderCode: {OrderCode}", orderCode);
                 throw new Exception($"Order not found: {orderCode}");
+            }
 
-            var paymentData = await _payOsService.VerifyPaymentAsync(orderCode);
-            var status = paymentData.RootElement.GetProperty("data").GetProperty("status").GetString();
+            string? paymentStatus = null;
 
-            switch (status?.ToUpperInvariant())
+            // Nếu có status từ webhook request, dùng luôn (nhanh hơn)
+            if (!string.IsNullOrWhiteSpace(webhookStatus))
+            {
+                paymentStatus = webhookStatus;
+                _logger.LogInformation("Using status from webhook request: {Status}", paymentStatus);
+            }
+            else
+            {
+                // Nếu không có, verify từ PayOS API
+                _logger.LogInformation("No status in webhook request, verifying from PayOS API...");
+                try
+                {
+                    var paymentData = await _payOsService.VerifyPaymentAsync(orderCode);
+                    
+                    // PayOS SDK trả về PaymentLink object, cần extract status
+                    // Cấu trúc: { code: "00", desc: "Success", data: { ... } }
+                    if (paymentData.RootElement.TryGetProperty("data", out var dataEl))
+                    {
+                        // Thử các property names có thể có
+                        if (dataEl.TryGetProperty("status", out var statusEl))
+                            paymentStatus = statusEl.GetString();
+                        else if (dataEl.TryGetProperty("Status", out var statusEl2))
+                            paymentStatus = statusEl2.GetString();
+                        else if (dataEl.TryGetProperty("state", out var stateEl))
+                            paymentStatus = stateEl.GetString();
+                        else if (dataEl.TryGetProperty("State", out var stateEl2))
+                            paymentStatus = stateEl2.GetString();
+                    }
+
+                    if (string.IsNullOrWhiteSpace(paymentStatus))
+                    {
+                        _logger.LogWarning("Could not extract status from PayOS API response");
+                        // Fallback: giữ nguyên status hiện tại
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error verifying payment status from PayOS API");
+                    throw;
+                }
+            }
+
+            // Map PayOS status sang hệ thống status
+            switch (paymentStatus?.ToUpperInvariant())
             {
                 case "PAID":
+                case "PAID_SUCCESS":
                     await _orderRepository.MarkAsPaidAsync(orderCode);
                     await _orderRepository.UpdateOrderStatusAsync(order.Id, "Processing");
+                    _logger.LogInformation("Order {OrderCode} marked as Paid and Processing", orderCode);
                     break;
 
                 case "CANCELLED":
+                case "CANCELLED_BY_USER":
                 case "EXPIRED":
                     await _orderRepository.UpdateOrderStatusAsync(order.Id, "Cancelled");
+                    _logger.LogInformation("Order {OrderCode} marked as Cancelled", orderCode);
+                    break;
+
+                case "PENDING":
+                case "WAITING_FOR_PAYMENT":
+                    // Giữ nguyên status "Pending"
+                    _logger.LogInformation("Order {OrderCode} remains Pending", orderCode);
                     break;
 
                 default:
-                    _logger.LogWarning("Unexpected payment status: {Status}", status);
-                    throw new Exception($"Unexpected payment status: {status}");
+                    _logger.LogWarning("Unexpected payment status: {Status} for order {OrderCode}", paymentStatus, orderCode);
+                    // Không throw exception, chỉ log warning để webhook vẫn trả về 200
+                    break;
             }
 
-            _logger.LogInformation("Handled PayOS callback for order {OrderCode} with status {Status}", orderCode, status);
+            _logger.LogInformation("Handled PayOS callback for order {OrderCode} with status {Status}", orderCode, paymentStatus);
         }
 
         // ==============================
