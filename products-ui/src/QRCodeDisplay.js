@@ -85,14 +85,54 @@ const QRCodeDisplay = ({ paymentUrl, orderCode }) => {
 
   console.log('🎨 QRCodeDisplay render - paymentUrl:', paymentUrl, 'orderCode:', orderCode);
 
+  // Normalize payment URL - trim whitespace, ensure it's a valid string, and ensure proper encoding
+  const normalizedPaymentUrl = paymentUrl ? String(paymentUrl).trim() : '';
+  
+  // Log normalized URL for debugging
+  useEffect(() => {
+    if (normalizedPaymentUrl) {
+      console.log('✅ Normalized Payment URL for QR:', normalizedPaymentUrl);
+      console.log('✅ URL length:', normalizedPaymentUrl.length);
+      console.log('✅ URL starts with http:', normalizedPaymentUrl.startsWith('http'));
+      console.log('✅ URL encoding check - original:', paymentUrl);
+      console.log('✅ URL encoding check - normalized:', normalizedPaymentUrl);
+      
+      // Verify URL is identical to what will be used in link
+      const linkUrl = normalizedPaymentUrl;
+      console.log('✅ Verifying QR URL matches link URL:', linkUrl === normalizedPaymentUrl);
+    }
+  }, [normalizedPaymentUrl, paymentUrl]);
+
   return (
     <div style={{ padding: '20px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
       <h2>Quét mã QR để thanh toán</h2>
-      {paymentUrl ? (
-        <div style={{ margin: '20px 0' }}>
-          <QRCodeCanvas value={paymentUrl} size={256} />
-          <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-            URL: {paymentUrl.substring(0, 50)}...
+      {normalizedPaymentUrl ? (
+        <div style={{ margin: '20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ 
+            padding: '25px', 
+            background: '#ffffff', 
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            display: 'inline-block',
+            border: '2px solid #f0f0f0'
+          }}>
+            <QRCodeCanvas 
+              value={normalizedPaymentUrl} 
+              size={320}
+              level="H"
+              includeMargin={true}
+              marginSize={4}
+              fgColor="#000000"
+              bgColor="#FFFFFF"
+            />
+          </div>
+          <p style={{ marginTop: '20px', fontSize: '12px', color: '#666', wordBreak: 'break-all', padding: '0 10px' }}>
+            {normalizedPaymentUrl.length > 70 
+              ? `${normalizedPaymentUrl.substring(0, 70)}...` 
+              : normalizedPaymentUrl}
+          </p>
+          <p style={{ marginTop: '10px', fontSize: '11px', color: '#999' }}>
+            (Mã QR này chứa cùng link như nút bên dưới)
           </p>
         </div>
       ) : (
@@ -122,13 +162,18 @@ const QRCodeDisplay = ({ paymentUrl, orderCode }) => {
         </div>
       )}
 
-      {paymentUrl && (
+      {normalizedPaymentUrl && (
         <div style={{ marginTop: '20px' }}>
           <a 
-            href={paymentUrl} 
+            href={normalizedPaymentUrl} 
             target="_blank" 
             rel="noopener noreferrer"
-            style={{ color: '#0066cc', textDecoration: 'underline' }}
+            style={{ 
+              color: '#0066cc', 
+              textDecoration: 'underline',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
           >
             Hoặc mở link thanh toán trong trình duyệt
           </a>

@@ -25,6 +25,12 @@ function App() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState({
+    name: "",
+    description: "",
+    price: "",
+    image: ""
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -76,6 +82,7 @@ function App() {
 
   const handleView = (id) => {
     setError("");
+    setFieldErrors({ name: "", description: "", price: "", image: "" });
     setQuantity(1);
     axios.get(`${API_URL}/${id}`).then((res) => {
       setFormData(res.data);
@@ -87,23 +94,103 @@ function App() {
     });
   };
 
+  // Validate individual field
+  const validateField = (fieldName, value, imageFile = null) => {
+    let error = "";
+
+    // Helper function to safely convert value to string
+    const toString = (val) => {
+      if (val == null) return "";
+      if (typeof val === "number") return String(val);
+      if (typeof val === "string") return val;
+      return String(val);
+    };
+
+    // Helper function to safely trim string
+    const safeTrim = (val) => {
+      const str = toString(val);
+      return str.trim();
+    };
+
+    switch (fieldName) {
+      case "name":
+        const nameStr = safeTrim(value);
+        if (!nameStr) {
+          error = "Tên sản phẩm không được để trống";
+        } else if (nameStr.length < 3) {
+          error = "Tên sản phẩm phải có ít nhất 3 ký tự";
+        } else if (nameStr.length > 200) {
+          error = "Tên sản phẩm không được quá 200 ký tự";
+        }
+        break;
+      
+      case "description":
+        const descStr = safeTrim(value);
+        if (!descStr) {
+          error = "Mô tả sản phẩm không được để trống";
+        } else if (descStr.length < 10) {
+          error = "Mô tả sản phẩm phải có ít nhất 10 ký tự";
+        } else if (descStr.length > 1000) {
+          error = "Mô tả sản phẩm không được quá 1000 ký tự";
+        }
+        break;
+      
+      case "price":
+        // Price có thể là number hoặc string - chỉ validate là số và không âm
+        const priceStr = toString(value);
+        if (!priceStr || priceStr.trim() === "") {
+          error = "Giá sản phẩm không được để trống";
+        } else {
+          const priceNum = parseFloat(priceStr);
+          if (isNaN(priceNum)) {
+            error = "Giá sản phẩm phải là một số hợp lệ";
+          } else if (priceNum < 0) {
+            error = "Giá sản phẩm không được âm";
+          }
+        }
+        break;
+      
+      case "image":
+        if (imageFile) {
+          const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          
+          if (!allowedTypes.includes(imageFile.type)) {
+            error = "File ảnh phải là định dạng JPG, PNG, GIF hoặc WEBP";
+          } else if (imageFile.size > maxSize) {
+            error = "Kích thước ảnh không được vượt quá 5MB";
+          }
+        } else if (!selectedId) {
+          // Only require image for new products
+          error = "Ảnh sản phẩm là bắt buộc khi tạo mới";
+        }
+        break;
+      
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  // Validate entire form
   const validateForm = () => {
-    if (!formData.name) {
-      setError("Product Name is required!");
+    const errors = {
+      name: validateField("name", formData.name),
+      description: validateField("description", formData.description),
+      price: validateField("price", formData.price),
+      image: validateField("image", null, formData.image)
+    };
+
+    setFieldErrors(errors);
+    
+    // Check if there are any errors
+    const hasErrors = Object.values(errors).some(error => error !== "");
+    if (hasErrors) {
+      setError("Vui lòng kiểm tra lại thông tin đã nhập");
       return false;
     }
-    if (!formData.description) {
-      setError("Product Description is required!");
-      return false;
-    }
-    if (!formData.price || parseFloat(formData.price) < 0) {
-      setError("Price is required and must be a non-negative number!");
-      return false;
-    }
-    if (!selectedId && !formData.image) {
-      setError("Image is required for a new product!");
-      return false;
-    }
+
     setError("");
     return true;
   };
@@ -278,6 +365,7 @@ function App() {
                 className="add-btn"
                 onClick={() => {
                   setFormData({ name: "", description: "", price: "", image: null });
+                  setFieldErrors({ name: "", description: "", price: "", image: "" });
                   setShowForm(true);
                   setIsEditing(true);
                   setSelectedId(null);
@@ -331,6 +419,7 @@ function App() {
                 <button
                   onClick={() => {
                     setFormData(item);
+                    setFieldErrors({ name: "", description: "", price: "", image: "" });
                     setSelectedId(item.id);
                     setIsEditing(true);
                     setShowForm(true);
@@ -347,7 +436,11 @@ function App() {
       )}
 
       {showForm && (
-        <div className="custom-modal-overlay" onClick={() => setShowForm(false)}>
+        <div className="custom-modal-overlay" onClick={() => {
+          setShowForm(false);
+          setFieldErrors({ name: "", description: "", price: "", image: "" });
+          setError("");
+        }}>
           <div className="custom-modal-container" onClick={(e) => e.stopPropagation()}>
             <h2>
               {isEditing ? (selectedId ? "Update Product" : "Add Product") : "View Product"}
@@ -361,38 +454,207 @@ function App() {
                 }
               }}
             >
-              {error && <div className="error-message">{error}</div>}
+              {error && <div className="error-message" style={{
+                padding: '12px',
+                marginBottom: '16px',
+                backgroundColor: '#fee2e2',
+                color: '#dc2626',
+                borderRadius: '8px',
+                border: '1px solid #fecaca',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}>{error}</div>}
 
-              <label>Name</label>
-              <input
-                type="text"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={!isEditing}
-              />
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  Tên sản phẩm <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, name: value });
+                    if (isEditing) {
+                      const error = validateField("name", value);
+                      setFieldErrors({ ...fieldErrors, name: error });
+                    }
+                  }}
+                  onBlur={() => {
+                    if (isEditing) {
+                      const error = validateField("name", formData.name);
+                      setFieldErrors({ ...fieldErrors, name: error });
+                    }
+                  }}
+                  disabled={!isEditing}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: fieldErrors.name ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+                {fieldErrors.name && (
+                  <p style={{
+                    color: '#ef4444',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    marginBottom: '0'
+                  }}>⚠️ {fieldErrors.name}</p>
+                )}
+              </div>
 
-              <label>Description</label>
-              <input
-                type="text"
-                value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                disabled={!isEditing}
-              />
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  Mô tả sản phẩm <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, description: value });
+                    if (isEditing) {
+                      const error = validateField("description", value);
+                      setFieldErrors({ ...fieldErrors, description: error });
+                    }
+                  }}
+                  onBlur={() => {
+                    if (isEditing) {
+                      const error = validateField("description", formData.description);
+                      setFieldErrors({ ...fieldErrors, description: error });
+                    }
+                  }}
+                  disabled={!isEditing}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: fieldErrors.description ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+                {fieldErrors.description && (
+                  <p style={{
+                    color: '#ef4444',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    marginBottom: '0'
+                  }}>⚠️ {fieldErrors.description}</p>
+                )}
+              </div>
 
-              <label>Price</label>
-              <input
-                type="number"
-                value={formData.price || ""}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                disabled={!isEditing}
-              />
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  Giá sản phẩm (VNĐ) <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.price || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, price: value });
+                    if (isEditing) {
+                      const error = validateField("price", value);
+                      setFieldErrors({ ...fieldErrors, price: error });
+                    }
+                  }}
+                  onBlur={() => {
+                    if (isEditing) {
+                      const error = validateField("price", formData.price);
+                      setFieldErrors({ ...fieldErrors, price: error });
+                    }
+                  }}
+                  disabled={!isEditing}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: fieldErrors.price ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+                {fieldErrors.price && (
+                  <p style={{
+                    color: '#ef4444',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    marginBottom: '0'
+                  }}>⚠️ {fieldErrors.price}</p>
+                )}
+              </div>
 
-              <label>Image</label>
-              <input
-                type="file"
-                onChange={(e) => setFormData({ ...formData, image: e.target.files[0] })}
-                disabled={!isEditing}
-              />
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  Ảnh sản phẩm {!selectedId && <span style={{ color: '#ef4444' }}>*</span>}
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    setFormData({ ...formData, image: file || null });
+                    if (isEditing && file) {
+                      const error = validateField("image", null, file);
+                      setFieldErrors({ ...fieldErrors, image: error });
+                    } else {
+                      setFieldErrors({ ...fieldErrors, image: "" });
+                    }
+                  }}
+                  disabled={!isEditing}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: fieldErrors.image ? '2px solid #ef4444' : '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+                {fieldErrors.image && (
+                  <p style={{
+                    color: '#ef4444',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    marginBottom: '0'
+                  }}>⚠️ {fieldErrors.image}</p>
+                )}
+                {!selectedId && (
+                  <p style={{
+                    color: '#6b7280',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    marginBottom: '0'
+                  }}>💡 Chỉ chấp nhận file JPG, PNG, GIF, WEBP. Kích thước tối đa 5MB</p>
+                )}
+              </div>
 
               {formData.imageUrl && !formData.image && (
                 <img src={formData.imageUrl} alt="preview" className="preview-img" />
@@ -407,8 +669,29 @@ function App() {
               )}
 
               {isEditing && (
-                <button type="submit" className="save-btn">
-                   Save
+                <button 
+                  type="submit" 
+                  className="save-btn"
+                  style={{
+                    width: '100%',
+                    padding: '14px 24px',
+                    backgroundColor: Object.values(fieldErrors).some(err => err !== "") 
+                      ? '#9ca3af' 
+                      : '#3b82f6',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: Object.values(fieldErrors).some(err => err !== "") 
+                      ? 'not-allowed' 
+                      : 'pointer',
+                    transition: 'all 0.2s ease',
+                    marginTop: '8px'
+                  }}
+                  disabled={Object.values(fieldErrors).some(err => err !== "")}
+                >
+                  {selectedId ? '💾 Lưu thay đổi' : '➕ Tạo sản phẩm'}
                 </button>
               )}
 
@@ -450,8 +733,29 @@ function App() {
                 </div>
               )}
 
-              <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>
-                 Close
+              <button 
+                type="button" 
+                className="cancel-btn" 
+                onClick={() => {
+                  setShowForm(false);
+                  setFieldErrors({ name: "", description: "", price: "", image: "" });
+                  setError("");
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  backgroundColor: '#ffffff',
+                  color: '#4b5563',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginTop: '12px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ✖️ Đóng
               </button>
             </form>
           </div>

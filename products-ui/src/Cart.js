@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import QRCodeDisplay from './QRCodeDisplay';
+// import QRCodeDisplay from './QRCodeDisplay'; // Không còn dùng nữa - redirect trực tiếp đến PayOS
 import { fetchCart, placeOrder, removeFromCart } from './api';
 
 const Cart = () => {
@@ -8,9 +8,9 @@ const Cart = () => {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [removingProductId, setRemovingProductId] = useState(null); // Track which product is being removed
-  const [showQRCode, setShowQRCode] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState('');
-  const [orderCode, setOrderCode] = useState('');
+  // const [showQRCode, setShowQRCode] = useState(false); // Không còn dùng - redirect trực tiếp
+  // const [paymentUrl, setPaymentUrl] = useState(''); // Không còn dùng
+  // const [orderCode, setOrderCode] = useState(''); // Không còn dùng
   const [error, setError] = useState('');
 
   const loadCart = async () => {
@@ -155,154 +155,62 @@ const Cart = () => {
 
   const handleOrderClick = async () => {
     console.log('🖱️ Button clicked - handleOrderClick called!');
-    console.log('🖱️ Current cart state:', cart);
-    console.log('🖱️ Current cart items:', cart?.items);
     
     setError('');
     
-    // Refresh cart trước khi đặt hàng
-    console.log('🔄 Starting cart refresh...');
-    setLoading(true);
-    try {
-      const freshCartData = await fetchCart();
-      console.log('✅ Fresh cart before order:', freshCartData);
-      
-      // Handle array response
-      let freshCart;
-      if (Array.isArray(freshCartData)) {
-        freshCart = { items: freshCartData };
-      } else if (freshCartData && freshCartData.items) {
-        freshCart = freshCartData;
-      } else {
-        freshCart = { items: [] };
-      }
-      
-      if (!freshCart || !freshCart.items || freshCart.items.length === 0) {
-        console.error('❌ Cart is empty after refresh!');
-        setError('Giỏ hàng trống! Vui lòng thêm sản phẩm vào giỏ hàng.');
-        setLoading(false);
-        setCart(freshCart);
-        return;
-      }
-      
-      console.log('✅ Cart refreshed successfully, items count:', freshCart.items.length);
-      setCart(freshCart);
-      setLoading(false);
+    // Validate cart trước khi đặt hàng (nhanh hơn, không cần refresh)
+    if (!cart?.items || cart.items.length === 0) {
+      setError('Giỏ hàng trống! Vui lòng thêm sản phẩm vào giỏ hàng.');
+      return;
+    }
 
-      // Đặt hàng
-      console.log('🔄 About to call placeOrder API...');
-      console.log('🔄 Checking authentication token...');
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('❌ No authentication token found!');
-        setError('Vui lòng đăng nhập lại.');
-        return;
-      }
-      console.log('✅ Token found:', token.substring(0, 20) + '...');
-      console.log('🔄 Calling placeOrder API now...');
-      let response;
-      try {
-        console.log('🔄 Waiting for placeOrder API response...');
-        console.log('🔄 This may take up to 60 seconds if backend is slow...');
-        response = await placeOrder();
-        console.log('✅ placeOrder returned successfully');
-        console.log('✅ Response object:', response);
-        console.log('✅ Response type:', typeof response);
-        console.log('✅ Response is array?', Array.isArray(response));
-        
-        if (response) {
-          console.log('✅ Response keys:', Object.keys(response));
-          
-          // Log tất cả properties của response
-          for (const key in response) {
-            console.log(`  - ${key}:`, response[key], typeof response[key]);
-            if (typeof response[key] === 'object' && response[key] !== null) {
-              console.log(`    Keys of ${key}:`, Object.keys(response[key]));
-            }
-          }
-        }
-      } catch (apiError) {
-        console.error('❌ Error in placeOrder call:', apiError);
-        throw apiError; // Re-throw để catch block bên ngoài xử lý
-      }
+    // Check authentication
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Vui lòng đăng nhập lại.');
+      return;
+    }
+
+    // Set loading ngay lập tức để UI phản hồi nhanh
+    setLoading(true);
+    
+    try {
+      console.log('🚀 Starting payment process...');
+      console.log('📤 Calling placeOrder API immediately...');
       
-      // Backend OrderController trả về:
-      // { message: "Order placed successfully!", data: OrderResponse }
-      // Và placeOrder() trả về response.data (là object trên)
-      // Vậy cần: response.data.paymentUrl hoặc response.data.PaymentUrl
-      let paymentUrlFromResponse = null;
-      let orderCodeFromResponse = null;
+      // Gọi placeOrder trực tiếp - backend sẽ tự validate cart
+      const response = await placeOrder();
+      console.log('✅ placeOrder returned successfully');
       
-      if (response) {
-        console.log('🔍 Analyzing response structure...');
-        
-        // Case 1: response = { message: "...", data: { paymentUrl, orderCode, ... } }
-        if (response.data) {
-          console.log('✅ Found response.data:', response.data);
-          console.log('✅ response.data keys:', Object.keys(response.data));
-          
-          if (response.data.paymentUrl) {
-            paymentUrlFromResponse = response.data.paymentUrl;
-            orderCodeFromResponse = response.data.orderCode;
-            console.log('✅ Found paymentUrl in response.data (camelCase)');
-          }
-          // Case 2: PascalCase
-          else if (response.data.PaymentUrl) {
-            paymentUrlFromResponse = response.data.PaymentUrl;
-            orderCodeFromResponse = response.data.OrderCode;
-            console.log('✅ Found PaymentUrl in response.data (PascalCase)');
-          }
-          else {
-            console.warn('⚠️ response.data exists but no paymentUrl found');
-            console.warn('response.data content:', JSON.stringify(response.data, null, 2));
-          }
-        }
-        // Case 3: response chính là OrderResponse trực tiếp (camelCase)
-        else if (response.paymentUrl) {
-          paymentUrlFromResponse = response.paymentUrl;
-          orderCodeFromResponse = response.orderCode;
-          console.log('✅ Found paymentUrl directly in response (camelCase)');
-        }
-        // Case 4: PascalCase trực tiếp
-        else if (response.PaymentUrl) {
-          paymentUrlFromResponse = response.PaymentUrl;
-          orderCodeFromResponse = response.OrderCode;
-          console.log('✅ Found PaymentUrl directly in response (PascalCase)');
-        }
-        else {
-          console.error('❌ No paymentUrl found in any structure');
-          console.error('Full response:', JSON.stringify(response, null, 2));
-        }
-      } else {
-        console.error('❌ Response is null or undefined');
-      }
+      // Extract payment URL nhanh chóng - thử tất cả các format có thể
+      const paymentUrlFromResponse = 
+        response?.data?.PaymentUrl || 
+        response?.data?.paymentUrl || 
+        response?.PaymentUrl || 
+        response?.paymentUrl;
       
-      console.log('✅ Final Extracted Payment URL:', paymentUrlFromResponse);
-      console.log('✅ Final Extracted Order Code:', orderCodeFromResponse);
+      const orderCodeFromResponse = 
+        response?.data?.OrderCode || 
+        response?.data?.orderCode || 
+        response?.OrderCode || 
+        response?.orderCode;
       
       if (paymentUrlFromResponse) {
-        console.log('✅ Setting payment URL and showing QR code');
-        setPaymentUrl(paymentUrlFromResponse);
-        setOrderCode(orderCodeFromResponse || '');
-        setShowQRCode(true);
-        console.log('✅ QR code should be displayed now');
+        // Lưu orderCode vào localStorage để có thể check status sau
+        if (orderCodeFromResponse) {
+          localStorage.setItem('pendingOrderCode', orderCodeFromResponse);
+        }
+        
+        // Redirect ngay lập tức đến PayOS - không cần setLoading(false)
+        window.location.href = paymentUrlFromResponse;
       } else {
-        console.error('❌ No payment URL found - cannot show QR code');
-        console.error('Response structure:', JSON.stringify(response, null, 2));
-        setError(`Không thể tạo link thanh toán. Vui lòng kiểm tra backend logs trên Render. Response keys: ${Object.keys(response || {}).join(', ')}`);
+        setLoading(false);
+        console.error('❌ No payment URL found in response');
+        setError(`Không thể tạo link thanh toán. Vui lòng thử lại sau.`);
       }
     } catch (error) {
-      console.error('❌ ========== Error creating order ==========');
-      console.error('❌ Error object:', error);
-      console.error('❌ Error name:', error?.name);
-      console.error('❌ Error message:', error?.message);
-      console.error('❌ Error code:', error?.code);
-      console.error('❌ Error response:', error?.response);
-      console.error('❌ Error response status:', error?.response?.status);
-      console.error('❌ Error response data:', error?.response?.data);
-      console.error('❌ Error config:', error?.config);
-      console.error('❌ Is timeout?', error?.code === 'ECONNABORTED' || error?.message?.includes('timeout'));
-      console.error('❌ ========== End error ==========');
+      setLoading(false);
+      console.error('❌ Error creating order:', error);
       
       let errorMessage = 'Có lỗi xảy ra khi đặt hàng.';
       
@@ -311,7 +219,7 @@ const Cart = () => {
         if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
           errorMessage = 'Request timeout. Backend có thể đang chậm hoặc không phản hồi. Vui lòng thử lại sau.';
         } else if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
-          errorMessage = 'Không thể kết nối đến backend. Vui lòng kiểm tra kết nối mạng hoặc backend có đang chạy không.';
+          errorMessage = 'Không thể kết nối đến backend. Vui lòng kiểm tra kết nối mạng.';
         } else {
           errorMessage = `Lỗi kết nối: ${error.message}`;
         }
@@ -325,30 +233,74 @@ const Cart = () => {
         errorMessage = error.message;
       }
       
-      // Nếu là lỗi PayOS hoặc payment link
-      if (errorMessage.toLowerCase().includes('payos') || errorMessage.toLowerCase().includes('payment')) {
-        errorMessage += ' Vui lòng kiểm tra cấu hình PayOS trong backend.';
-      }
-      
       setError(errorMessage);
-      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <p>Loading...</p>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '20px'
+      }}>
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '48px',
+          maxWidth: '400px',
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+        }}>
+          <div style={{
+            marginBottom: '24px',
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              border: '4px solid #f3f4f6',
+              borderTop: '4px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+          </div>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: '700',
+            color: '#1f2937',
+            marginBottom: '12px'
+          }}>
+            Đang xử lý đơn hàng...
+          </h2>
+          <p style={{
+            fontSize: '16px',
+            color: '#6b7280',
+            marginBottom: '0'
+          }}>
+            Vui lòng đợi trong giây lát
+          </p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
-  if (showQRCode) {
-    console.log('🎯 Rendering QRCodeDisplay component');
-    console.log('🎯 Payment URL passed:', paymentUrl);
-    console.log('🎯 Order Code passed:', orderCode);
-    return <QRCodeDisplay paymentUrl={paymentUrl} orderCode={orderCode} />;
-  }
+  // Bỏ phần hiển thị QR code - redirect trực tiếp đến PayOS
+  // if (showQRCode) {
+  //   return <QRCodeDisplay paymentUrl={paymentUrl} orderCode={orderCode} />;
+  // }
 
   const calculateTotal = () => {
     if (!cart?.items || !Array.isArray(cart.items)) return 0;
